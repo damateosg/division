@@ -74,15 +74,18 @@
     .final-sum { font-size: 2.2rem; font-weight: 900; color: var(--pink); margin-top: 20px; border-top: 3px dashed #CBD5E1; padding-top: 15px; opacity: 0; transition: opacity 0.3s; width: 100%; text-align: center;}
     .final-sum.show { opacity: 1; }
 
-    /* ====== ANIMACIÓN DESTELlO ====== */
+    /* ====== ANIMACIONES Y TEXTO ====== */
     @keyframes flash-attention {
-      0% { background-color: rgba(245, 158, 11, 0.4); transform: scale(1.02); } /* Color dorado brillante */
+      0% { background-color: rgba(245, 158, 11, 0.4); transform: scale(1.02); }
       50% { background-color: rgba(245, 158, 11, 0.2); transform: scale(1.01); }
-      100% { background-color: rgba(59, 130, 246, 0.15); transform: scale(1); } /* Vuelve al azul original */
+      100% { background-color: rgba(59, 130, 246, 0.15); transform: scale(1); }
     }
 
     .step-text { background: rgba(59,130,246,0.15); border-left: 5px solid var(--blue); padding: 15px; border-radius: 10px; font-size: 1.05rem; line-height: 1.5; display: none; margin-bottom: 15px; font-weight: 700; transition: background-color 0.3s; }
     .step-text.flash { animation: flash-attention 0.8s ease-out; }
+    
+    /* Caja de ayuda visual para restas */
+    .help-box { background: rgba(255,255,255,0.7); border: 2px dashed var(--blue); border-radius: 12px; padding: 15px; margin-top: 15px; display: none; font-size: 1.2rem; text-align: center; color: #1e293b; animation: fadeIn 0.3s ease; }
 
     /* ====== PRÁCTICA (JUGAR) ====== */
     .quiz-q { font-size: 3.5rem; font-weight: 900; text-align: center; margin: 10px 0; }
@@ -304,6 +307,41 @@ function getParts(D, d) {
   return parts;
 }
 
+// Función generadora del HTML para las restas paso a paso
+function buildHelpHTML() {
+  let html = '';
+  let current = l_D;
+  let facil = l_d * 10;
+  
+  for(let i = 0; i < l_parts.length; i++) {
+     let p = l_parts[i].val;
+     if (p === facil) { 
+         let next = current - facil;
+         html += `<div style="margin-bottom: 8px;"><b>${current}</b> - <b style="color:var(--pink)">${facil}</b> = <b style="color:var(--blue)">${next}</b></div>`;
+         current = next;
+     } else {
+         html += `<div style="margin-top: 15px; color: var(--green);">¡Y nos sobran <b>${current}</b>!</div>`;
+     }
+  }
+  // Si terminó en 0 exacto sin resto distinto
+  if (current === 0) {
+     html += `<div style="margin-top: 15px; color: var(--green);">¡Y no nos sobra nada (0)!</div>`;
+  }
+  return html;
+}
+
+// Alternar la caja de ayuda
+window.toggleHelp = function() {
+    const hb = document.getElementById('help-box');
+    if (hb.style.display === 'none' || hb.style.display === '') {
+        hb.innerHTML = buildHelpHTML();
+        hb.style.display = 'block';
+        sndPop();
+    } else {
+        hb.style.display = 'none';
+    }
+};
+
 // ====== MODO APRENDER ======
 let l_D, l_d, l_parts, l_step = 0;
 
@@ -333,11 +371,9 @@ function startLearn() {
   nextLearnStep();
 }
 
-// FUNCIÓN PARA DISPARAR EL DESTELLO
 function triggerFlash(element) {
   element.classList.remove('flash');
-  // Truco para forzar el reinicio de la animación CSS
-  void element.offsetWidth; 
+  void element.offsetWidth; // Force reflow
   element.classList.add('flash');
 }
 
@@ -361,7 +397,14 @@ function nextLearnStep() {
       `;
       branches.appendChild(b);
     });
-    txt.innerHTML = `Hemos roto el <b>${l_D}</b> en <b>${l_parts.length} trozos</b>.<br>Quitamos ${l_d*10} todas las veces que pudimos, y nos quedó un último trozo de ${l_parts[l_parts.length-1].val}.`;
+    txt.innerHTML = `
+      Hemos roto el <b>${l_D}</b> en <b>${l_parts.length} trozos</b>.<br>
+      Quitamos ${l_d*10} todas las veces que pudimos, y nos quedó un último trozo de ${l_parts[l_parts.length-1].val}.
+      <div style="margin-top: 15px; text-align: center;">
+        <button class="btn-sec" style="padding: 8px 15px; font-size: 0.95rem; width: auto; border-width: 2px;" onclick="toggleHelp()">💡 Ver cómo restamos</button>
+      </div>
+      <div id="help-box" class="help-box"></div>
+    `;
   }
   else if(l_step === 2) {
     l_parts.forEach((p, i) => document.getElementById(`l-op-${i}`).classList.add('show'));
@@ -377,9 +420,7 @@ function nextLearnStep() {
     sndSuccess(); throwConfetti();
   }
   
-  // Disparamos el destello visual en el texto
   triggerFlash(txt);
-  
   l_step++;
 }
 
